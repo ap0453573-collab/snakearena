@@ -1,0 +1,31 @@
+// A simple Node.js multiplayer server snippet
+const express = require('express');
+const app = express();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+
+let onlinePlayers = {};
+
+io.on('connection', (socket) => {
+    console.log('A snake joined the arena: ' + socket.id);
+    
+    // Create a new player slot
+    onlinePlayers[socket.id] = { x: 500, y: 500, score: 0, skin: 'color' };
+
+    // Broadcast new player to everyone else
+    socket.on('playerMove', (data) => {
+        if(onlinePlayers[socket.id]) {
+            onlinePlayers[socket.id].x = data.x;
+            onlinePlayers[socket.id].y = data.y;
+        }
+        // Send updated arena state to all connected screens
+        io.emit('arenaUpdate', onlinePlayers);
+    });
+
+    socket.on('disconnect', () => {
+        delete onlinePlayers[socket.id];
+        io.emit('arenaUpdate', onlinePlayers);
+    });
+});
+
+http.listen(3000, () => console.log('Arena server live on port 3000!'));
