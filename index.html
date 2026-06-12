@@ -1,31 +1,695 @@
-// A simple Node.js multiplayer server snippet
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-
-let onlinePlayers = {};
-
-io.on('connection', (socket) => {
-    console.log('A snake joined the arena: ' + socket.id);
-    
-    // Create a new player slot
-    onlinePlayers[socket.id] = { x: 500, y: 500, score: 0, skin: 'color' };
-
-    // Broadcast new player to everyone else
-    socket.on('playerMove', (data) => {
-        if(onlinePlayers[socket.id]) {
-            onlinePlayers[socket.id].x = data.x;
-            onlinePlayers[socket.id].y = data.y;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Arena - High FPS Flag Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        // Send updated arena state to all connected screens
-        io.emit('arenaUpdate', onlinePlayers);
-    });
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #070614 !important;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            user-select: none;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+        }
+        
+        .screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(15, 10, 35, 0.98) 0%, rgba(5, 5, 15, 0.98) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            color: white;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 55px;
+            font-weight: 900;
+            background: linear-gradient(45deg, #00ff88, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .subtitle {
+            color: #a4b0be;
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
 
-    socket.on('disconnect', () => {
-        delete onlinePlayers[socket.id];
-        io.emit('arenaUpdate', onlinePlayers);
-    });
-});
+        .tab-headers {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #dcdde1;
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: #00ff88;
+            color: #070614;
+            border-color: #00ff88;
+        }
 
-http.listen(3000, () => console.log('Arena server live on port 3000!'));
+        .custom-box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 35px;
+            width: 550px;
+            min-height: 165px;
+        }
+        .grid-view {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* Custom Scrollbar for extended flag menu list */
+        .grid-view::-webkit-scrollbar { width: 6px; }
+        .grid-view::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+        .grid-view::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+        
+        .color-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-btn.active {
+            border-color: #ffffff;
+            box-shadow: 0 0 15px rgba(255,255,255,0.4);
+        }
+
+        .flag-btn {
+            background: rgba(255, 255, 255, 0.07);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .flag-btn:hover {
+            transform: scale(1.04);
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .flag-btn.active {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.15);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            background: linear-gradient(45deg, #00ff88, #00ee77);
+            color: #070614;
+            border: none;
+            padding: 16px 45px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 40px;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(0, 255, 136, 0.35);
+            transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+        }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0, 255, 136, 0.5); }
+        .action-btn.secondary {
+            background: linear-gradient(45deg, #70a1ff, #1e90ff);
+            color: white;
+            box-shadow: 0 6px 25px rgba(30, 144, 255, 0.35);
+        }
+        .action-btn.secondary:hover { box-shadow: 0 8px 30px rgba(30, 144, 255, 0.5); }
+        .action-btn:active { transform: translateY(1px); }
+
+        #game-over-screen h1 {
+            background: none;
+            -webkit-text-fill-color: #ff4757;
+            color: #ff4757;
+            text-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
+        }
+        #final-score { font-size: 24px; margin-bottom: 35px; color: #a4b0be; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">Score: <span id="score">0</span></div>
+
+    <div id="start-screen" class="screen-overlay">
+        <h1>SNAKE ARENA MAX</h1>
+        <div class="subtitle">High FPS Tournament Edition • 12 Active Nations</div>
+        
+        <div class="tab-headers">
+            <button id="tabColors" class="tab-btn active" onclick="switchTab('colors')">Solid Skins</button>
+            <button id="tabFlags" class="tab-btn" onclick="switchTab('flags')">World Flags (12) 🏳️‍🌈</button>
+        </div>
+
+        <div class="custom-box">
+            <div class="grid-view" id="customizerContainer"></div>
+        </div>
+        
+        <button class="action-btn" onclick="startGame()">Enter Arena</button>
+    </div>
+
+    <div id="game-over-screen" class="screen-overlay" style="display: none;">
+        <h1>GAME OVER</h1>
+        <div id="final-score">Score: 0</div>
+        
+        <div class="btn-group">
+            <button class="action-btn" onclick="tryAgain()">Play Again</button>
+            <button class="action-btn secondary" onclick="backToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d", { alpha: false }); 
+        const scoreElement = document.getElementById("score");
+        const uiLayer = document.getElementById("ui-layer");
+        const startScreen = document.getElementById("start-screen");
+        const gameOverScreen = document.getElementById("game-over-screen");
+        const finalScoreElement = document.getElementById("final-score");
+        const customizerContainer = document.getElementById("customizerContainer");
+
+        let score = 0;
+        let gameOver = false;
+        let gameStarted = false;
+        let inMenu = true;
+        let mouse = { x: 0, y: 0 };
+        let pulseTime = 0; 
+        let activeTab = 'colors'; 
+        
+        const thickness = 14;
+        const snakeSpeed = 4.5;
+        const attackRange = 220;
+        const dangerSensorRange = 75;
+
+        let player;
+        let npcs = [];
+        let foodArray = [];
+        
+        // Cache object map allocated for lightning-fast image blits
+        const cacheMap = {};
+
+        const clothingColors = [
+            { hex: "#00ff88", name: "Neon Green" },
+            { hex: "#00f2fe", name: "Cyber Cyan" },
+            { hex: "#ff4757", name: "Hot Pink" },
+            { hex: "#ffa502", name: "Electric Orange" },
+            { hex: "#be2edd", name: "Laser Purple" },
+            { hex: "#eccc68", name: "Banana Yellow" }
+        ];
+
+        const flagSkins = [
+            { id: "USA", emoji: "🇺🇸", name: "USA" },
+            { id: "GB", emoji: "🇬🇧", name: "UK" },
+            { id: "FR", emoji: "🇫🇷", name: "France" },
+            { id: "DE", emoji: "🇩🇪", name: "Germany" },
+            { id: "CA", emoji: "🇨🇦", name: "Canada" },
+            { id: "BR", emoji: "🇧🇷", name: "Brazil" },
+            { id: "IN", emoji: "🇮🇳", name: "India" },
+            { id: "IT", emoji: "🇮🇹", name: "Italy" },
+            { id: "JP", emoji: "🇯🇵", name: "Japan" },
+            { id: "ES", emoji: "🇪🇸", name: "Spain" },
+            { id: "AU", emoji: "🇦🇺", name: "Australia" },
+            { id: "MX", emoji: "🇲🇽", name: "Mexico" }
+        ];
+
+        let selectedSkin = { type: 'color', val: '#00ff88' }; 
+
+        function forceResize() {
+            canvas.width = window.innerWidth || 1280;
+            canvas.height = window.innerHeight || 720;
+        }
+        window.addEventListener('resize', forceResize);
+        forceResize();
+
+        // HIGH PERFORMANCE ENGINE CORE Optimization: Pre-renders flag vector art onto 36x36 canvas sprites
+        function preRenderFlagTextures() {
+            const size = 36; 
+            const radius = size / 2;
+
+            flagSkins.forEach(flag => {
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = size;
+                offCanvas.height = size;
+                const oCtx = offCanvas.getContext('2d');
+
+                // Apply clipping circle perimeter mask onto the cached texture block once
+                oCtx.beginPath();
+                oCtx.arc(radius, radius, radius, 0, Math.PI * 2);
+                oCtx.clip();
+
+                let fid = flag.id;
+
+                if (fid === "USA") {
+                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#ffffff";
+                    for(let j=0; j<size; j+=5) { oCtx.fillRect(0, j, size, 2); }
+                    oCtx.fillStyle = "#2f3542"; oCtx.fillRect(0, 0, radius, radius);
+                } 
+                else if (fid === "GB") {
+                    oCtx.fillStyle = "#2f3542"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#ffffff";
+                    oCtx.fillRect(radius - 5, 0, 10, size); oCtx.fillRect(0, radius - 5, size, 10);
+                    oCtx.fillStyle = "#ff4757";
+                    oCtx.fillRect(radius - 2, 0, 4, size); oCtx.fillRect(0, radius - 2, size, 4);
+                }
+                else if (fid === "FR") {
+                    oCtx.fillStyle = "#1e90ff"; oCtx.fillRect(0, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(size * 0.34, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(size * 0.68, 0, size * 0.34, size);
+                } 
+                else if (fid === "DE") {
+                    oCtx.fillStyle = "#1e272e"; oCtx.fillRect(0, 0, size, size * 0.34);
+                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, size * 0.34, size, size * 0.34);
+                    oCtx.fillStyle = "#ffa502"; oCtx.fillRect(0, size * 0.68, size, size * 0.34);
+                }
+                else if (fid === "CA") {
+                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(size * 0.25, 0, size * 0.5, size);
+                    oCtx.fillStyle = "#ff4757"; oCtx.beginPath(); oCtx.arc(radius, radius, 4, 0, Math.PI*2); oCtx.fill();
+                }
+                else if (fid === "BR") {
+                    oCtx.fillStyle = "#2ed573"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#ffa502";
+                    oCtx.beginPath(); oCtx.moveTo(radius, 3); oCtx.lineTo(size-3, radius); oCtx.lineTo(radius, size-3); oCtx.lineTo(3, radius); oCtx.closePath(); oCtx.fill();
+                    oCtx.fillStyle = "#1e90ff"; oCtx.beginPath(); oCtx.arc(radius, radius, radius * 0.45, 0, Math.PI*2); oCtx.fill();
+                }
+                else if (fid === "IN") {
+                    oCtx.fillStyle = "#ff9f43"; oCtx.fillRect(0, 0, size, size * 0.34);
+                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(0, size * 0.34, size, size * 0.34);
+                    oCtx.fillStyle = "#10ac84"; oCtx.fillRect(0, size * 0.68, size, size * 0.34);
+                    oCtx.strokeStyle = "#2f3542"; oCtx.lineWidth = 1.5; oCtx.beginPath(); oCtx.arc(radius, radius, 3, 0, Math.PI*2); oCtx.stroke();
+                }
+                else if (fid === "IT") {
+                    oCtx.fillStyle = "#2ed573"; oCtx.fillRect(0, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(size * 0.34, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(size * 0.68, 0, size * 0.34, size);
+                }
+                else if (fid === "JP") {
+                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#ff4757"; oCtx.beginPath(); oCtx.arc(radius, radius, radius * 0.45, 0, Math.PI * 2); oCtx.fill();
+                }
+                else if (fid === "ES") {
+                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#f1c40f"; oCtx.fillRect(0, size * 0.25, size, size * 0.5);
+                    oCtx.fillStyle = "#e74c3c"; oCtx.fillRect(size * 0.25, size * 0.4, 3, 6); // Simple crest approximation
+                }
+                else if (fid === "AU") {
+                    oCtx.fillStyle = "#0a3d62"; oCtx.fillRect(0, 0, size, size);
+                    oCtx.fillStyle = "#ffffff"; // Minimalistic Southern Cross stars representation
+                    oCtx.fillRect(size * 0.7, size * 0.3, 2, 2); oCtx.fillRect(size * 0.8, size * 0.5, 2, 2);
+                    oCtx.fillRect(size * 0.6, size * 0.7, 2, 2); oCtx.fillRect(size * 0.75, size * 0.8, 2, 2);
+                }
+                else if (fid === "MX") {
+                    oCtx.fillStyle = "#10ac84"; oCtx.fillRect(0, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(size * 0.34, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#ee5253"; oCtx.fillRect(size * 0.68, 0, size * 0.34, size);
+                    oCtx.fillStyle = "#b38f4f"; oCtx.beginPath(); oCtx.arc(radius, radius, 2, 0, Math.PI*2); oCtx.fill();
+                }
+
+                cacheMap[fid] = offCanvas;
+            });
+        }
+
+        function switchTab(type) {
+            activeTab = type;
+            document.getElementById("tabColors").className = `tab-btn ${type === 'colors' ? 'active' : ''}`;
+            document.getElementById("tabFlags").className = `tab-btn ${type === 'flags' ? 'active' : ''}`;
+            renderCustomizerItems();
+        }
+
+        function renderCustomizerItems() {
+            customizerContainer.innerHTML = "";
+            if (activeTab === 'colors') {
+                clothingColors.forEach(color => {
+                    const btn = document.createElement("button");
+                    btn.className = `color-btn ${selectedSkin.type === 'color' && selectedSkin.val === color.hex ? 'active' : ''}`;
+                    btn.style.backgroundColor = color.hex;
+                    btn.onclick = () => { selectedSkin = { type: 'color', val: color.hex }; renderCustomizerItems(); };
+                    customizerContainer.appendChild(btn);
+                });
+            } else {
+                flagSkins.forEach(flag => {
+                    const btn = document.createElement("button");
+                    btn.className = `flag-btn ${selectedSkin.type === 'flag' && selectedSkin.val === flag.id ? 'active' : ''}`;
+                    btn.innerHTML = `<span>${flag.emoji}</span> <span>${flag.name}</span>`;
+                    btn.onclick = () => { selectedSkin = { type: 'flag', val: flag.id }; renderCustomizerItems(); };
+                    customizerContainer.appendChild(btn);
+                });
+            }
+        }
+
+        class Snake {
+            constructor(id, x, y, skinConfig, isNPC = false) {
+                this.id = id;
+                this.skin = skinConfig;
+                this.isNPC = isNPC;
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetLength = 25;
+                this.parts = Array.from({ length: this.targetLength }, () => ({ x, y }));
+            }
+
+            update() {
+                let head = this.parts[0];
+
+                if (!this.isNPC) {
+                    if (inMenu) {
+                        this.angle = Math.sin(pulseTime * 2) * 0.4 - Math.PI/2;
+                        this.skin = selectedSkin; 
+                        mouse.x = canvas.width / 2;
+                        mouse.y = canvas.height / 2 - 80;
+                    } else {
+                        if (!gameStarted) return;
+                        let dist = Math.hypot(mouse.x - head.x, mouse.y - head.y);
+                        if (dist > 5) {
+                            this.angle = Math.atan2(mouse.y - head.y, mouse.x - head.x);
+                        }
+                    }
+                } else {
+                    let danger = false;
+                    let sx = head.x + Math.cos(this.angle) * dangerSensorRange;
+                    let sy = head.y + Math.sin(this.angle) * dangerSensorRange;
+
+                    if (gameStarted && !gameOver) {
+                        player.parts.forEach((p, i) => {
+                            if (i > 1 && Math.hypot(sx - p.x, sy - p.y) < thickness * 2.5) danger = true;
+                        });
+                    }
+
+                    npcs.forEach(npc => {
+                        npc.parts.forEach((p, i) => {
+                            if (npc.id === this.id && i < 4) return;
+                            if (Math.hypot(sx - p.x, sy - p.y) < thickness * 2.5) danger = true;
+                        });
+                    });
+
+                    if (danger) {
+                        this.angle += Math.PI / 2;
+                    } else {
+                        let target = null;
+                        let minDist = attackRange;
+
+                        if (!gameOver && gameStarted) {
+                            let d = Math.hypot(head.x - player.parts[0].x, head.y - player.parts[0].y);
+                            if (d < minDist) { minDist = d; target = player.parts[0]; }
+                        }
+
+                        npcs.forEach(npc => {
+                            if (npc.id !== this.id) {
+                                let d = Math.hypot(head.x - npc.parts[0].x, head.y - npc.parts[0].y);
+                                if (d < minDist) { minDist = d; target = npc.parts[0]; }
+                            }
+                        });
+
+                        if (target) {
+                            this.angle += (Math.atan2(target.y - head.y, target.x - head.x) - this.angle) * 0.12;
+                        } else {
+                            let food = findClosestFood(head);
+                            if (food) {
+                                this.angle += (Math.atan2(food.y - head.y, food.x - head.x) - this.angle) * 0.06;
+                            }
+                        }
+                    }
+                }
+
+                let activeSpeed = inMenu && !this.isNPC ? 1.5 : snakeSpeed;
+                let newHead = {
+                    x: head.x + Math.cos(this.angle) * activeSpeed,
+                    y: head.y + Math.sin(this.angle) * activeSpeed
+                };
+
+                this.parts.unshift(newHead);
+                
+                while (this.parts.length > this.targetLength) {
+                    this.parts.pop();
+                }
+
+                if (head.x < -thickness) { head.x = canvas.width + thickness; this.parts.forEach(p => p.x += canvas.width); }
+                else if (head.x > canvas.width + thickness) { head.x = -thickness; this.parts.forEach(p => p.x -= canvas.width); }
+                if (head.y < -thickness) { head.y = canvas.height + thickness; this.parts.forEach(p => p.y += canvas.height); }
+                else if (head.y > canvas.height + thickness) { head.y = -thickness; this.parts.forEach(p => p.y -= canvas.height); }
+            }
+
+            draw() {
+                const isColor = this.skin.type === 'color';
+                const flagImg = !isColor ? cacheMap[this.skin.val] : null;
+
+                for (let i = this.parts.length - 1; i >= 0; i--) {
+                    let p = this.parts[i];
+                    let r = thickness * (1 - i / (this.parts.length * 2.5));
+                    if (i === 0) r = thickness + 2; 
+
+                    let size = r * 2;
+
+                    if (isColor) {
+                        ctx.fillStyle = this.skin.val;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (flagImg) {
+                        // ULTRA FAST GRAPHICS BLIT: Paints the pre-rendered flag canvas template instantaneously
+                        ctx.save();
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(this.angle);
+                        ctx.drawImage(flagImg, -r, -r, size, size);
+                        ctx.restore();
+                    }
+                }
+
+                // Eye Rendering Layout
+                let head = this.parts[0];
+                ctx.fillStyle = "#ffffff";
+                let eyeOffset = 0.5; let eyeDist = 7;    
+                for (let side of [-1, 1]) {
+                    let eyeX = head.x + Math.cos(this.angle + side * eyeOffset) * eyeDist;
+                    let eyeY = head.y + Math.sin(this.angle + side * eyeOffset) * eyeDist;
+                    ctx.beginPath(); ctx.arc(eyeX, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#000000";
+                    let pupilX = eyeX + Math.cos(this.angle) * 1;
+                    let pupilY = eyeY + Math.sin(this.angle) * 1;
+                    ctx.beginPath(); ctx.arc(pupilX, pupilY, 1.8, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#ffffff";
+                }
+            }
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            if (inMenu) return; 
+            gameStarted = true;
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        function findClosestFood(head) {
+            let closest = null, minDist = Infinity;
+            for (let i = 0; i < foodArray.length; i++) {
+                let f = foodArray[i];
+                let d = Math.hypot(head.x - f.x, head.y - f.y);
+                if (d < minDist) { minDist = d; closest = f; }
+            }
+            return closest;
+        }
+
+        function spawnFood() {
+            let isSuper = Math.random() < 0.10; 
+            return {
+                x: Math.random() * (canvas.width - 80) + 40,
+                y: Math.random() * (canvas.height - 80) + 40,
+                color: isSuper ? "#ffffff" : `hsl(${Math.random() * 360}, 100%, 60%)`,
+                isSuper: isSuper,
+                baseRadius: isSuper ? 12 : 8 
+            };
+        }
+
+        function setupArenaEnvironment() {
+            score = 0;
+            gameOver = false;
+            gameStarted = false;
+            scoreElement.innerText = score;
+            forceResize();
+
+            let startX = canvas.width / 2;
+            let startY = inMenu ? canvas.height / 2 + 160 : canvas.height / 2;
+
+            player = new Snake("player", startX, startY, selectedSkin, false);
+            foodArray = Array.from({ length: 30 }, spawnFood);
+            
+            const npcColors = ["#be2edd", "#f0932b", "#eb4d4b", "#70a1ff", "#eccc68"];
+            npcs = npcColors.map((col, idx) => {
+                let rx = Math.random() < 0.5 ? Math.random() * canvas.width * 0.2 : canvas.width * 0.8 + Math.random() * canvas.width * 0.2;
+                let ry = Math.random() < 0.5 ? Math.random() * canvas.height * 0.2 : canvas.height * 0.8 + Math.random() * canvas.height * 0.2;
+                return new Snake(`npc-${idx}`, rx, ry, { type: 'color', val: col }, true);
+            });
+        }
+
+        function startGame() {
+            inMenu = false;
+            startScreen.style.display = "none";
+            uiLayer.style.display = "block";
+            player.parts.forEach(p => {
+                p.x = canvas.width / 2;
+                p.y = canvas.height / 2;
+            });
+        }
+
+        function tryAgain() {
+            gameOverScreen.style.display = "none";
+            uiLayer.style.display = "block";
+            inMenu = false;
+            setupArenaEnvironment();
+        }
+
+        function backToMenu() {
+            inMenu = true;
+            gameOverScreen.style.display = "none";
+            startScreen.style.display = "flex";
+            setupArenaEnvironment();
+            renderCustomizerItems();
+        }
+
+        function loop() {
+            ctx.fillStyle = "#070614";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            pulseTime += 0.07; 
+
+            if (inMenu) {
+                player.update();
+            } else if (!gameOver) {
+                player.update();
+                npcs.forEach(npc => npc.update());
+
+                foodArray.forEach((food, index) => {
+                    let hitRadius = thickness + food.baseRadius;
+                    
+                    if (gameStarted && Math.hypot(player.parts[0].x - food.x, player.parts[0].y - food.y) < hitRadius) {
+                        score += food.isSuper ? 50 : 10; 
+                        scoreElement.innerText = score;
+                        player.targetLength += food.isSuper ? 15 : 3; 
+                        foodArray[index] = spawnFood();
+                    }
+                    
+                    npcs.forEach(npc => {
+                        if (Math.hypot(npc.parts[0].x - food.x, npc.parts[0].y - food.y) < hitRadius) {
+                            npc.targetLength += food.isSuper ? 12 : 2;
+                            foodArray[index] = spawnFood();
+                        }
+                    });
+                });
+
+                if (gameStarted) {
+                    let pHead = player.parts[0];
+                    npcs.forEach(npc => {
+                        for (let i = 3; i < npc.parts.length; i++) {
+                            if (Math.hypot(pHead.x - npc.parts[i].x, pHead.y - npc.parts[i].y) < thickness) {
+                                gameOver = true;
+                                uiLayer.style.display = "none";
+                                finalScoreElement.innerText = `Final Score: ${score}`;
+                                gameOverScreen.style.display = "flex";
+                            }
+                        }
+
+                        let nHead = npc.parts[0];
+                        for (let i = 3; i < player.parts.length; i++) {
+                            if (Math.hypot(nHead.x - player.parts[i].x, nHead.y - player.parts[i].y) < thickness) {
+                                npc.targetLength = 25;
+                                npc.parts = Array.from({ length: 25 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height }));
+                            }
+                        }
+                    });
+                }
+            }
+
+            if (!inMenu) {
+                foodArray.forEach(f => {
+                    if (f.isSuper) {
+                        let animatedRadius = f.baseRadius + Math.sin(pulseTime) * 1.5;
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = `hsl(${(pulseTime * 40) % 360}, 100%, 65%)`;
+                        ctx.fillStyle = `hsl(${(pulseTime * 40) % 360}, 100%, 70%)`;
+                        ctx.beginPath(); ctx.arc(f.x, f.y, animatedRadius, 0, Math.PI * 2); ctx.fill();
+                        ctx.shadowBlur = 0; 
+                    } else {
+                        ctx.fillStyle = f.color;
+                        ctx.beginPath(); ctx.arc(f.x, f.y, f.baseRadius, 0, Math.PI * 2); ctx.fill();
+                    }
+                });
+                npcs.forEach(npc => npc.draw());
+            }
+
+            player.draw(); 
+            requestAnimationFrame(loop);
+        }
+
+        window.onload = function() {
+            preRenderFlagTextures();
+            renderCustomizerItems();
+            setupArenaEnvironment();
+            loop();
+        };
+    </script>
+</body>
+</html>
