@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-    <title>Snake Arena - Emoji Tournament Edition</title>
+    <title>Snake Arena - Legendary Tournament Edition</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            /* Prevents blue tap highlights on mobile devices */
             -webkit-tap-highlight-color: transparent;
         }
         body, html {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #070614 !important;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #05040d !important;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Disables double-tap-to-zoom completely at browser level */
+            touch-action: none;
         }
         canvas {
             position: absolute;
@@ -37,16 +36,64 @@
             top: 15px;
             left: 15px;
             color: #ffffff;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             z-index: 5;
             pointer-events: none;
             display: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* Compact Top Right Leaderboard */
+        #leaderboard-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 180px;
+            background: rgba(10, 8, 28, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border-radius: 10px;
+            padding: 10px;
+            color: #fff;
+            font-size: 11px;
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        #leaderboard-panel h3 {
+            font-size: 12px;
+            color: #00ff88;
+            text-align: center;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 3px;
+        }
+        .leaderboard-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        .leaderboard-row.player-row {
+            color: #00f2fe;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 242, 254, 0.6);
+        }
+        .leaderboard-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 110px;
         }
 
         #boost-notifier {
             margin-top: 6px;
-            font-size: 13px;
+            font-size: 12px;
             letter-spacing: 1px;
             font-weight: 800;
             text-transform: uppercase;
@@ -67,7 +114,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(15, 10, 35, 0.98) 0%, rgba(5, 5, 15, 0.98) 100%);
+            background: radial-gradient(circle at center, rgba(16, 12, 42, 0.95) 0%, rgba(4, 3, 10, 0.99) 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -75,61 +122,133 @@
             z-index: 10;
             color: white;
             text-align: center;
-            padding: 20px 15px;
+            padding: 25px 15px;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-y; /* Permits UI scrolling while protecting game environment */
+            touch-action: pan-y;
+        }
+
+        /* Profile Card with interactive Level Stream launch ability */
+        .profile-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
+            border: 2px solid rgba(255,165,2,0.4);
+            border-radius: 20px;
+            padding: 15px 25px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 32px rgba(255,165,2,0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .profile-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 32px rgba(255,165,2,0.3);
+        }
+        .profile-card::after {
+            content: "✨ View Rewards";
+            position: absolute;
+            bottom: 4px;
+            right: 12px;
+            font-size: 9px;
+            color: #ffa502;
+            text-transform: uppercase;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+        .level-display-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffa502;
+            text-shadow: 0 0 10px rgba(255,165,2,0.5);
+            margin-bottom: 5px;
+        }
+        .xp-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .xp-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffa502, #ff7f50);
+            box-shadow: 0 0 8px #ffa502;
+            transition: width 0.4s ease;
+        }
+        .xp-text {
+            font-size: 11px;
+            color: #a4b0be;
+            margin-top: 4px;
         }
         
         h1 {
-            font-size: clamp(28px, 8vw, 50px);
+            font-size: clamp(32px, 9vw, 55px);
             font-weight: 900;
-            background: linear-gradient(45deg, #00ff88, #00f2fe);
+            background: linear-gradient(45deg, #00ff88, #00f2fe, #be2edd);
+            background-size: 400% 400%;
+            animation: flowGlow 6s ease infinite;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-            letter-spacing: 1px;
-            flex-shrink: 0;
-        }
-        
-        .subtitle {
-            color: #a4b0be;
-            font-size: clamp(11px, 3.5vw, 15px);
-            margin-bottom: 15px;
+            margin-bottom: 3px;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 30px rgba(0,255,136,0.2);
             flex-shrink: 0;
         }
 
+        @keyframes flowGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .subtitle {
+            color: #8e92a4;
+            font-size: clamp(11px, 3.2vw, 14px);
+            margin-bottom: 20px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
         .name-input-container {
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
             flex-shrink: 0;
         }
         .name-input-container label {
             font-size: 11px;
             color: #00ff88;
             font-weight: bold;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
         }
         .name-input-container input {
-            background: rgba(255, 255, 255, 0.06);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            padding: 12px 24px;
             border-radius: 30px;
             color: white;
             font-size: 16px;
             font-weight: bold;
             text-align: center;
             outline: none;
-            width: 240px;
-            transition: all 0.2s;
+            width: 260px;
+            transition: all 0.3s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
         }
         .name-input-container input:focus {
             border-color: #00ff88;
             background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0,255,136,0.3);
         }
 
         .tab-headers {
@@ -141,10 +260,10 @@
             flex-shrink: 0;
         }
         .tab-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #dcdde1;
-            padding: 8px 14px; /* Slightly padded for mobile target accuracy */
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbccd6;
+            padding: 8px 14px;
             font-size: 12px;
             font-weight: bold;
             border-radius: 20px;
@@ -153,78 +272,175 @@
         }
         .tab-btn.active {
             background: #00ff88;
-            color: #070614;
+            color: #05040d;
             border-color: #00ff88;
+            box-shadow: 0 0 10px rgba(0,255,136,0.4);
         }
 
         .custom-box {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 15px;
             border-radius: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             width: 100%;
-            max-width: 500px;
+            max-width: 520px;
             flex-shrink: 0;
+            box-shadow: inset 0 4px 20px rgba(0,0,0,0.4);
         }
         .grid-view {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
-            max-height: 160px;
+            max-height: 180px;
             overflow-y: auto;
-            padding-right: 3px;
+            padding-right: 5px;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-y;
         }
 
-        .grid-view::-webkit-scrollbar { width: 4px; }
+        .grid-view::-webkit-scrollbar { width: 5px; }
         .grid-view::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
         
         .color-btn {
-            width: 42px; /* Amplified hit targets for fat thumbs */
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             border: 3px solid transparent;
             cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
         }
-        .color-btn.active { border-color: #ffffff; }
+        .color-btn:active { transform: scale(0.9); }
+        .color-btn.active { border-color: #ffffff; box-shadow: 0 0 12px rgba(255,255,255,0.5); }
 
         .flag-btn {
-            background: rgba(255, 255, 255, 0.07);
-            border: 2px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(255, 255, 255, 0.12);
             color: #fff;
-            padding: 8px 14px;
-            border-radius: 12px;
+            padding: 10px 15px;
+            border-radius: 14px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
+            font-weight: 600;
+            position: relative;
+            transition: all 0.2s;
         }
+        .flag-btn:active { transform: scale(0.95); }
         .flag-btn.active {
             border-color: #00ff88;
-            background: rgba(0, 255, 136, 0.15);
+            background: rgba(0, 255, 136, 0.12);
+            box-shadow: 0 0 10px rgba(0,255,136,0.2);
         }
+
+        /* Insane Glowing Legendary States */
+        .legendary-glow-item {
+            animation: insaneNeonBorder 2s ease-in-out infinite alternate;
+            background: rgba(255, 0, 128, 0.1) !important;
+        }
+        @keyframes insaneNeonBorder {
+            0% { border-color: #ff0055; box-shadow: 0 0 8px #ff0055, inset 0 0 4px #ff0055; }
+            50% { border-color: #9400d3; box-shadow: 0 0 18px #9400d3, inset 0 0 8px #9400d3; }
+            100% { border-color: #ffd700; box-shadow: 0 0 25px #ffd700, inset 0 0 12px #ffd700; }
+        }
+
+        .skin-lock-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 4, 13, 0.85);
+            border-radius: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ff4757;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        /* Interactive Level Stream Modal Panel Styling */
+        #level-stream-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 2, 10, 0.98);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 15px;
+        }
+        .stream-title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffa502;
+            text-shadow: 0 0 15px rgba(255,165,2,0.4);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .stream-container {
+            width: 100%;
+            max-width: 500px;
+            flex-grow: 1;
+            overflow-y: auto;
+            margin: 20px 0;
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .stream-row {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+        .stream-row.unlocked {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+        .stream-row.current {
+            border-color: #ffa502;
+            background: rgba(255, 165, 2, 0.1);
+            box-shadow: 0 0 12px rgba(255,165,2,0.2);
+        }
+        .stream-info h4 { font-size: 16px; color: #fff; }
+        .stream-info p { font-size: 12px; color: #a4b0be; margin-top: 2px; }
+        .stream-status { font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; }
+        .status-unlocked { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .status-locked { background: rgba(255,71,87,0.2); color: #ff4757; }
 
         .action-btn {
             background: linear-gradient(45deg, #00ff88, #00ee77);
-            color: #070614;
+            color: #05040d;
             border: none;
-            padding: 14px 40px;
+            padding: 15px 45px;
             font-size: 18px;
             font-weight: bold;
             border-radius: 40px;
             cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+            box-shadow: 0 6px 25px rgba(0, 255, 136, 0.35);
             flex-shrink: 0;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            transition: all 0.2s;
         }
+        .action-btn:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(0, 255, 136, 0.2); }
         .action-btn.secondary {
             background: linear-gradient(45deg, #70a1ff, #1e90ff);
             color: white;
-            box-shadow: 0 5px 20px rgba(30, 144, 255, 0.3);
+            box-shadow: 0 6px 25px rgba(30, 144, 255, 0.35);
         }
         .btn-group { display: flex; gap: 15px; justify-content: center; flex-shrink: 0; width: 100%; max-width: 400px;}
 
@@ -250,6 +466,11 @@
         <div>Score: <span id="score">0</span></div>
         <div id="boost-notifier" class="boost-charging">Boost Charging...</div>
     </div>
+
+    <div id="leaderboard-panel">
+        <h3>Top Eaters</h3>
+        <div id="leaderboard-content"></div>
+    </div>
     
     <div id="touch-indicator"></div>
 
@@ -257,9 +478,17 @@
         <h1>SNAKE ARENA</h1>
         <div class="subtitle">Double Tap / Left Click to Boost (Every 1 min)</div>
         
+        <div class="profile-card" onclick="openLevelStream()">
+            <div id="menuLevelTitle" class="level-display-title">Level 1</div>
+            <div class="xp-bar-container">
+                <div id="menuXPBar" class="xp-bar-fill"></div>
+            </div>
+            <div id="menuXPText" class="xp-text">0 / 100 XP</div>
+        </div>
+
         <div class="name-input-container">
             <label for="playerNameInput">Warrior Nickname</label>
-            <input type="text" id="playerNameInput" value="Player Snake" maxlength="12">
+            <input type="text" id="playerNameInput" value="Player Snake" maxlength="12" oninput="checkCheatCode()">
         </div>
 
         <div class="tab-headers">
@@ -268,6 +497,7 @@
             <button id="tabEmojiSmilies" class="tab-btn" onclick="switchTab('emoji_smilies')">😀 Faces</button>
             <button id="tabEmojiWarriors" class="tab-btn" onclick="switchTab('emoji_warriors')">😎 Cool</button>
             <button id="tabEmojiAnimals" class="tab-btn" onclick="switchTab('emoji_animals')">🦁 Animals</button>
+            <button id="tabEmojiLegendary" class="tab-btn" onclick="switchTab('emoji_legendary')">👑 Mythic</button>
         </div>
 
         <div class="custom-box">
@@ -275,6 +505,16 @@
         </div>
         
         <button class="action-btn" onclick="startGame()">Enter Arena</button>
+    </div>
+
+    <div id="level-stream-modal">
+        <div class="stream-title">Level Progression Stream</div>
+        <div style="color: #8e92a4; font-size:13px;">Track your milestone rewards down to max Tier 100</div>
+        
+        <div class="stream-container" id="streamContainerScroll">
+            </div>
+
+        <button class="action-btn secondary" style="margin-bottom:0;" onclick="closeLevelStream()">Close Stream</button>
     </div>
 
     <div id="game-over-screen" class="screen-overlay" style="display: none; justify-content: center;">
@@ -294,6 +534,8 @@
         const ctx = canvas.getContext("2d", { alpha: false }); 
         const scoreElement = document.getElementById("score");
         const uiLayer = document.getElementById("ui-layer");
+        const leaderboardPanel = document.getElementById("leaderboard-panel");
+        const leaderboardContent = document.getElementById("leaderboard-content");
         const boostNotifier = document.getElementById("boost-notifier");
         const startScreen = document.getElementById("start-screen");
         const gameOverScreen = document.getElementById("game-over-screen");
@@ -301,6 +543,78 @@
         const customizerContainer = document.getElementById("customizerContainer");
         const playerNameInput = document.getElementById("playerNameInput");
         const touchIndicator = document.getElementById("touch-indicator");
+        const levelStreamModal = document.getElementById("level-stream-modal");
+        const streamContainerScroll = document.getElementById("streamContainerScroll");
+
+        let profileState = { level: 1, xp: 0 };
+
+        function saveProfile() {
+            localStorage.setItem("snake_arena_profile_v3", JSON.stringify(profileState));
+        }
+        function loadProfile() {
+            let saved = localStorage.getItem("snake_arena_profile_v3");
+            if (saved) {
+                try {
+                    profileState = JSON.parse(saved);
+                    if (!profileState.level) profileState.level = 1;
+                    if (profileState.xp === undefined) profileState.xp = 0;
+                } catch(e) { console.error(e); }
+            }
+            updateMenuProfileHUD();
+        }
+
+        function getXPForLevel(lvl) {
+            if (lvl >= 100) return Infinity;
+            return lvl * 130 + 100;
+        }
+
+        function addExperience(amount) {
+            if (profileState.level >= 100) {
+                profileState.level = 100;
+                return;
+            }
+            profileState.xp += amount;
+            let required = getXPForLevel(profileState.level);
+            while (profileState.xp >= required && profileState.level < 100) {
+                profileState.xp -= required;
+                profileState.level++;
+                required = getXPForLevel(profileState.level);
+            }
+            if(profileState.level >= 100) {
+                profileState.level = 100;
+                profileState.xp = 0;
+            }
+            saveProfile();
+            updateMenuProfileHUD();
+        }
+
+        function updateMenuProfileHUD() {
+            document.getElementById("menuLevelTitle").innerText = `Level ${profileState.level}` + (profileState.level >= 100 ? " (MAX)" : "");
+            let req = getXPForLevel(profileState.level);
+            if (profileState.level >= 100) {
+                document.getElementById("menuXPBar").style.width = "100%";
+                document.getElementById("menuXPText").innerText = "Glow Tag Unlocked!";
+            } else {
+                let pct = (profileState.xp / req) * 100;
+                document.getElementById("menuXPBar").style.width = `${pct}%`;
+                document.getElementById("menuXPText").innerText = `${Math.floor(profileState.xp)} / ${req} XP`;
+            }
+        }
+
+        function isCheatActive() {
+            return playerNameInput.value.trim().toLowerCase() === 'hehe';
+        }
+
+        function checkCheatCode() {
+            if (isCheatActive()) {
+                renderCustomizerItems();
+            }
+        }
+
+        function checkItemLockStatus(reqLevel) {
+            if (isCheatActive()) return false; 
+            return profileState.level < reqLevel;
+        }
 
         let score = 0;
         let gameOver = false;
@@ -310,11 +624,12 @@
         let isDrawingTouch = false;
         let pulseTime = 0; 
         let activeTab = 'colors'; 
+        let matchStartTime = 0;
         
-        const thickness = 14;
+        const baseThickness = 14; 
         const baseSnakeSpeed = 4.2;
-        const attackRange = 220;
-        const dangerSensorRange = 75;
+        const attackRange = 260;
+        const dangerSensorRange = 85;
 
         const arenaWidth = 4000;
         const arenaHeight = 3000;
@@ -324,7 +639,6 @@
         let foodArray = [];
         const cacheMap = {};
 
-        // Boost Engine Tracker Metrics
         let lastBoostTime = 0; 
         let boostActiveUntil = 0; 
         const boostCooldownMs = 60000; 
@@ -332,38 +646,94 @@
         let lastTapTime = 0;           
 
         const clothingColors = [
-            { hex: "#00ff88", name: "Green" }, { hex: "#00f2fe", name: "Cyan" },
-            { hex: "#ff4757", name: "Pink" }, { hex: "#ffa502", name: "Orange" },
-            { hex: "#be2edd", name: "Purple" }, { hex: "#eccc68", name: "Yellow" }
+            { hex: "#00ff88", name: "Green", req: 1 }, { hex: "#00f2fe", name: "Cyan", req: 1 },
+            { hex: "#ff4757", name: "Pink", req: 1 }, { hex: "#ffa502", name: "Orange", req: 1 },
+            { hex: "#be2edd", name: "Purple", req: 5 }, { hex: "#eccc68", name: "Yellow", req: 10 },
+            // Insane Tiers
+            { hex: "#ff007f", name: "Neon Rose", req: 20, legendary: true }, { hex: "#7fff00", name: "Toxic Green", req: 40, legendary: true },
+            { hex: "#9400d3", name: "Dark Nebula", req: 60, legendary: true }, { hex: "#ffd700", name: "Solid Gold", req: 80, legendary: true }
         ];
 
         const flagSkins = [
-            { id: "USA", emoji: "🇺🇸", name: "USA" }, { id: "GB", emoji: "🇬🇧", name: "UK" },
-            { id: "FR", emoji: "🇫🇷", name: "FR" }, { id: "DE", emoji: "🇩🇪", name: "DE" },
-            { id: "CA", emoji: "🇨🇦", name: "CA" }, { id: "BR", emoji: "🇧🇷", name: "BR" },
-            { id: "IN", emoji: "🇮🇳", name: "IN" }, { id: "JP", emoji: "🇯🇵", name: "JP" },
-            { id: "IT", emoji: "🇮🇹", name: "IT" }, { id: "ES", emoji: "🇪🇸", name: "ES" },
-            { id: "MX", emoji: "🇲🇽", name: "MX" }, { id: "KR", emoji: "🇰🇷", name: "KR" },
-            { id: "AU", emoji: "🇦🇺", name: "AU" }
+            { id: "USA", emoji: "🇺🇸", name: "USA", req: 1 }, { id: "GB", emoji: "🇬🇧", name: "UK", req: 1 },
+            { id: "FR", emoji: "🇫🇷", name: "FR", req: 1 }, { id: "DE", emoji: "🇩🇪", name: "DE", req: 1 },
+            { id: "CA", emoji: "🇨🇦", name: "CA", req: 5 }, { id: "BR", emoji: "🇧🇷", name: "BR", req: 10 },
+            { id: "IN", emoji: "🇮🇳", name: "IN", req: 15 }, { id: "JP", emoji: "🇯🇵", name: "JP", req: 20 },
+            { id: "IT", emoji: "🇮🇹", name: "IT", req: 25 }, { id: "ES", emoji: "🇪🇸", name: "ES", req: 30 },
+            { id: "MX", emoji: "🇲🇽", name: "MX", req: 40 }, { id: "KR", emoji: "🇰🇷", name: "KR", req: 50, legendary: true },
+            { id: "AU", emoji: "🇦🇺", name: "AU", req: 70, legendary: true }
         ];
 
         const emojiCategories = {
-            emoji_smilies: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😜","🤪","😝","🤑","🤗","🤫","🤔","🤐","🤨","😏","🥳"],
-            emoji_warriors: ["😎","🤓","🧐","🤠","🥳","🤡","👹","👺","👻","👽","🤖","👑","⚔️","🥷","🦸","🦹","🔥","⚡","💎","💀","☠️","😈","👿","👹","🌟"],
-            emoji_animals: ["🦁","🐯","🐱","🐶","🐺","🐻","🐼","🐨","🦄","🐮","🐷","🐸","🐵","🐔","🐧","🦆","🦅","🦉","🦇","👑","🐉","🐲","🐍","🦎","🐙"]
+            emoji_smilies: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇"],
+            emoji_warriors: ["😎","🤓","🧐","🤠","🥳","🤡","👹","👺","👻","👽"],
+            emoji_animals: ["🦁","🐯","🐱","🐶","🐺","🐻","🐼","🐨","🦄","🐮"],
+            emoji_legendary: ["👑","🔱","💎","☯️","🐉","🔱","🌌","⚔️","🛸","😈"]
         };
 
-        const npcNames = ["Goku", "Vegeta", "Trunks", "Frieza", "Broly", "Piccolo", "Gohan", "Luffy", "Naruto", "Sasuke", "Zoro", "Nami", "Sanji", "Chopper", "Robin", "Franky", "Brook", "Jinbe", "Ace", "Sabo", "Shanks"];
+        function getEmojiLevelRequirement(category, index) {
+            if (category === 'emoji_smilies') return 1;
+            if (category === 'emoji_warriors') return 5;
+            if (category === 'emoji_animals') return 15;
+            if (category === 'emoji_legendary') return Math.min(95, 30 + (index * 7));
+            return 1;
+        }
+
+        const npcNames = ["AlphaStrike", "QuantumViper", "VenomMamba", "ApexTitan", "ShadowBoa", "CyberCobra", "CosmicPython", "GlitchSerpent", "HyperAsps", "SolarWorm", "NebulaGorgon", "VoidBoa"];
 
         let selectedSkin = { type: 'color', val: '#00ff88' }; 
         let selectedEmojiFace = "😀"; 
+
+        function openLevelStream() {
+            levelStreamModal.style.display = "flex";
+            streamContainerScroll.innerHTML = "";
+            
+            const milestoneMilestones = [1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
+            
+            milestoneMilestones.forEach(lvl => {
+                let statusClass = "locked";
+                let statusLabel = "Locked";
+                
+                if (profileState.level > lvl) {
+                    statusClass = "unlocked";
+                    statusLabel = "Unlocked";
+                } else if (profileState.level === lvl) {
+                    statusClass = "current";
+                    statusLabel = "Current Level";
+                }
+
+                let rewardDesc = "Unlocks unique tier customization entries.";
+                if (lvl === 1) rewardDesc = "Starter cosmetics unlocked.";
+                if (lvl === 5) rewardDesc = "Purple Skin + Warrior Emojis Tab.";
+                if (lvl === 10) rewardDesc = "Yellow Skin + Premium Nation Flag packs.";
+                if (lvl === 20) rewardDesc = "Mythic Neon Rose Skin unlocked.";
+                if (lvl === 30) rewardDesc = "👑 Mythic Tier Category Selection Pool Access.";
+                if (lvl === 50) rewardDesc = "Legendary Korean Dragon Emblem.";
+                if (lvl === 80) rewardDesc = "✨ Pure Solid Gold Metallic Body Mod.";
+                if (lvl === 100) rewardDesc = "🌈 Overlord Status: Chromatic Animating Matrix Head Tag.";
+
+                let row = document.createElement("div");
+                row.className = `stream-row ${statusClass}`;
+                row.innerHTML = `
+                    <div class="stream-info">
+                        <h4>Level ${lvl}</h4>
+                        <p>${rewardDesc}</p>
+                    </div>
+                    <div class="stream-status status-${statusClass === 'current' ? 'unlocked' : statusClass}">${statusLabel}</div>
+                `;
+                streamContainerScroll.appendChild(row);
+            });
+        }
+
+        function closeLevelStream() {
+            levelStreamModal.style.display = "none";
+        }
 
         function forceResize() {
             canvas.width = window.innerWidth || 800;
             canvas.height = window.innerHeight || 600;
         }
         window.addEventListener('resize', forceResize);
-        window.addEventListener('orientationchange', () => setTimeout(forceResize, 200));
         forceResize();
 
         function preRenderFlagTextures() {
@@ -380,40 +750,14 @@
                 } else if (fid === "GB") {
                     oCtx.fillStyle = "#2f3542"; oCtx.fillRect(0, 0, size, size); oCtx.fillStyle = "#ffffff";
                     oCtx.fillRect(radius - 5, 0, 10, size); oCtx.fillRect(0, radius - 5, size, 10);
-                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(radius - 2, 0, 4, size); oCtx.fillRect(0, radius - 2, size, 4);
                 } else if (fid === "FR") {
                     oCtx.fillStyle = "#1e90ff"; oCtx.fillRect(0, 0, size * 0.34, size); oCtx.fillStyle = "#ffffff";
                     oCtx.fillRect(size * 0.34, 0, size * 0.34, size); oCtx.fillStyle = "#ff4757"; oCtx.fillRect(size * 0.68, 0, size * 0.34, size);
                 } else if (fid === "DE") {
                     oCtx.fillStyle = "#1e272e"; oCtx.fillRect(0, 0, size, size * 0.34); oCtx.fillStyle = "#ff4757";
                     oCtx.fillRect(0, size * 0.34, size, size * 0.34); oCtx.fillStyle = "#ffa502"; oCtx.fillRect(0, size * 0.68, size, size * 0.34);
-                } else if (fid === "CA") {
-                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, 0, size, size); oCtx.fillStyle = "#ffffff";
-                    oCtx.fillRect(size * 0.25, 0, size * 0.5, size); oCtx.fillStyle = "#ff4757"; oCtx.beginPath(); oCtx.arc(radius, radius, 4, 0, Math.PI*2); oCtx.fill();
-                } else if (fid === "BR") {
-                    oCtx.fillStyle = "#2ed573"; oCtx.fillRect(0, 0, size, size); oCtx.fillStyle = "#ffa502";
-                    oCtx.beginPath(); oCtx.moveTo(radius, 3); oCtx.lineTo(size-3, radius); oCtx.lineTo(radius, size-3); oCtx.closePath(); oCtx.fill();
-                } else if (fid === "IN") {
-                    oCtx.fillStyle = "#ff9f43"; oCtx.fillRect(0, 0, size, size * 0.34); oCtx.fillStyle = "#ffffff";
-                    oCtx.fillRect(0, size * 0.34, size, size * 0.34); oCtx.fillStyle = "#10ac84"; oCtx.fillRect(0, size * 0.68, size, size * 0.34);
-                } else if (fid === "JP") {
-                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(0, 0, size, size); oCtx.fillStyle = "#ff4757";
-                    oCtx.beginPath(); oCtx.arc(radius, radius, radius * 0.45, 0, Math.PI * 2); oCtx.fill();
-                } else if (fid === "IT") {
-                    oCtx.fillStyle = "#10ac84"; oCtx.fillRect(0, 0, size * 0.34, size); oCtx.fillStyle = "#ffffff";
-                    oCtx.fillRect(size * 0.34, 0, size * 0.34, size); oCtx.fillStyle = "#ff4757"; oCtx.fillRect(size * 0.68, 0, size * 0.34, size);
-                } else if (fid === "ES") {
-                    oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, 0, size, size * 0.25); oCtx.fillStyle = "#ffa502";
-                    oCtx.fillRect(0, size * 0.25, size, size * 0.5); oCtx.fillStyle = "#ff4757"; oCtx.fillRect(0, size * 0.75, size, size * 0.25);
-                } else if (fid === "MX") {
-                    oCtx.fillStyle = "#10ac84"; oCtx.fillRect(0, 0, size * 0.34, size); oCtx.fillStyle = "#ffffff";
-                    oCtx.fillRect(size * 0.34, 0, size * 0.34, size); oCtx.fillStyle = "#ff4757"; oCtx.fillRect(size * 0.68, 0, size * 0.34, size);
-                } else if (fid === "KR") {
-                    oCtx.fillStyle = "#ffffff"; oCtx.fillRect(0, 0, size, size); oCtx.fillStyle = "#ff4757";
-                    oCtx.beginPath(); oCtx.arc(radius, radius, radius * 0.35, 0, Math.PI * 2); oCtx.fill();
-                } else if (fid === "AU") {
-                    oCtx.fillStyle = "#0a3d62"; oCtx.fillRect(0, 0, size, size); oCtx.fillStyle = "#ffffff";
-                    oCtx.fillRect(0, 0, radius, 3); oCtx.fillRect(0, 0, 3, radius);
+                } else {
+                    oCtx.fillStyle = `hsl(${Math.random() * 360}, 85%, 50%)`; oCtx.fillRect(0, 0, size, size);
                 }
                 cacheMap[fid] = offCanvas;
             });
@@ -421,7 +765,7 @@
 
         function switchTab(type) {
             activeTab = type;
-            const headers = ["colors", "flags", "emoji_smilies", "emoji_warriors", "emoji_animals"];
+            const headers = ["colors", "flags", "emoji_smilies", "emoji_warriors", "emoji_animals", "emoji_legendary"];
             headers.forEach(h => {
                 const element = document.getElementById(`tab${h.charAt(0).toUpperCase() + h.slice(1)}`);
                 if(element) element.className = `tab-btn ${type === h ? 'active' : ''}`;
@@ -431,28 +775,52 @@
 
         function renderCustomizerItems() {
             customizerContainer.innerHTML = "";
+            let isLegendaryTab = (activeTab === 'emoji_legendary');
+
             if (activeTab === 'colors') {
                 clothingColors.forEach(color => {
                     const btn = document.createElement("button");
                     btn.className = `color-btn ${selectedSkin.type === 'color' && selectedSkin.val === color.hex ? 'active' : ''}`;
+                    if (color.legendary) btn.classList.add("legendary-glow-item");
                     btn.style.backgroundColor = color.hex;
-                    btn.onclick = () => { selectedSkin = { type: 'color', val: color.hex }; renderCustomizerItems(); };
+                    
+                    let isLocked = checkItemLockStatus(color.req);
+                    if (isLocked) {
+                        btn.innerHTML = `<div class="skin-lock-overlay">Lvl ${color.req}</div>`;
+                    } else {
+                        btn.onclick = () => { selectedSkin = { type: 'color', val: color.hex }; renderCustomizerItems(); };
+                    }
                     customizerContainer.appendChild(btn);
                 });
             } else if (activeTab === 'flags') {
                 flagSkins.forEach(flag => {
                     const btn = document.createElement("button");
                     btn.className = `flag-btn ${selectedSkin.type === 'flag' && selectedSkin.val === flag.id ? 'active' : ''}`;
+                    if (flag.legendary) btn.classList.add("legendary-glow-item");
                     btn.innerHTML = `<span>${flag.emoji}</span> <span>${flag.name}</span>`;
-                    btn.onclick = () => { selectedSkin = { type: 'flag', val: flag.id }; renderCustomizerItems(); };
+                    
+                    let isLocked = checkItemLockStatus(flag.req);
+                    if (isLocked) {
+                        btn.innerHTML += `<div class="skin-lock-overlay">Lvl ${flag.req}</div>`;
+                    } else {
+                        btn.onclick = () => { selectedSkin = { type: 'flag', val: flag.id }; renderCustomizerItems(); };
+                    }
                     customizerContainer.appendChild(btn);
                 });
             } else if (emojiCategories[activeTab]) {
-                emojiCategories[activeTab].forEach(emojiStr => {
+                emojiCategories[activeTab].forEach((emojiStr, idx) => {
                     const btn = document.createElement("button");
                     btn.className = `flag-btn ${selectedEmojiFace === emojiStr ? 'active' : ''}`;
+                    if (isLegendaryTab) btn.classList.add("legendary-glow-item");
                     btn.innerHTML = `<span style="font-size:20px;">${emojiStr}</span>`;
-                    btn.onclick = () => { selectedEmojiFace = emojiStr; renderCustomizerItems(); };
+                    
+                    let reqLvl = getEmojiLevelRequirement(activeTab, idx);
+                    let isLocked = checkItemLockStatus(reqLvl);
+                    if (isLocked) {
+                        btn.innerHTML += `<div class="skin-lock-overlay">Lvl ${reqLvl}</div>`;
+                    } else {
+                        btn.onclick = () => { selectedEmojiFace = emojiStr; renderCustomizerItems(); };
+                    }
                     customizerContainer.appendChild(btn);
                 });
             }
@@ -467,14 +835,27 @@
                 this.angle = Math.random() * Math.PI * 2;
                 this.targetLength = 20;
                 this.parts = Array.from({ length: this.targetLength }, () => ({ x, y }));
+                this.foodEatenCount = isNPC ? Math.floor(Math.random() * 80) : 0; 
+                this.customLvl = isNPC ? Math.floor(Math.random() * 95) + 1 : profileState.level;
                 
+                // Added structural cooldown properties for NPCs
+                this.npcBoostActiveUntil = 0;
+                this.npcNextBoostAvailableAt = 0; 
+
                 if(this.isNPC) {
-                    const allNPCList = [...emojiCategories.emoji_smilies, ...emojiCategories.emoji_warriors, ...emojiCategories.emoji_animals];
+                    const allNPCList = [...emojiCategories.emoji_smilies, ...emojiCategories.emoji_warriors, ...emojiCategories.emoji_animals, ...emojiCategories.emoji_legendary];
                     this.npcEmoji = allNPCList[Math.floor(Math.random() * allNPCList.length)];
-                    if(Math.random() < 0.3 && flagSkins.length > 0) {
-                        this.skin = { type: 'flag', val: flagSkins[Math.floor(Math.random() * flagSkins.length)].id };
+                    
+                    // Assign random initial skins to NPCs, including matching Legendary configurations
+                    if (Math.random() < 0.25) {
+                        let legends = clothingColors.filter(c => c.legendary);
+                        this.skin = { type: 'color', val: legends[Math.floor(Math.random() * legends.length)].hex };
                     }
                 }
+            }
+
+            get currentThickness() {
+                return baseThickness;
             }
 
             update() {
@@ -484,6 +865,7 @@
                 let currentSpeed = baseSnakeSpeed;
 
                 if (!this.isNPC) {
+                    this.customLvl = profileState.level; 
                     if (inMenu) {
                         this.angle = Math.sin(pulseTime * 2) * 0.4 - Math.PI/2;
                         this.skin = selectedSkin; 
@@ -498,47 +880,45 @@
                             this.angle = Math.atan2(worldMouseY - head.y, worldMouseX - head.x);
                         }
                         if (Date.now() < boostActiveUntil) {
-                            currentSpeed = baseSnakeSpeed * 1.75; 
+                            currentSpeed = baseSnakeSpeed * 1.85; 
                         }
                     }
                 } else {
+                    let now = Date.now();
+                    let isNPCBoosting = now < this.npcBoostActiveUntil;
+
                     let danger = false;
                     let sx = head.x + Math.cos(this.angle) * dangerSensorRange;
                     let sy = head.y + Math.sin(this.angle) * dangerSensorRange;
 
                     if (gameStarted && !gameOver && player && player.parts[0]) {
                         player.parts.forEach((p, i) => {
-                            if (i > 1 && Math.hypot(sx - p.x, sy - p.y) < thickness * 2.5) danger = true;
+                            if (i > 1 && Math.hypot(sx - p.x, sy - p.y) < this.currentThickness * 2.5) {
+                                danger = true;
+                                // NPCs obey a strict 60-second balance cooldown before firing boost again
+                                if(now >= this.npcNextBoostAvailableAt && Math.random() < 0.4) { 
+                                    this.npcBoostActiveUntil = now + 2500; 
+                                    this.npcNextBoostAvailableAt = now + 60000; 
+                                }
+                            }
                         });
                     }
-                    npcs.forEach(npc => {
-                        npc.parts.forEach((p, i) => {
-                            if (npc.id === this.id && i < 4) return;
-                            if (Math.hypot(sx - p.x, sy - p.y) < thickness * 2.5) danger = true;
-                        });
-                    });
 
                     if (danger) {
                         this.angle += Math.PI / 2;
                     } else {
-                        let target = null; let minDist = attackRange;
-                        if (!gameOver && gameStarted && player && player.parts[0]) {
-                            let d = Math.hypot(head.x - player.parts[0].x, head.y - player.parts[0].y);
-                            if (d < minDist) { minDist = d; target = player.parts[0]; }
-                        }
-                        npcs.forEach(npc => {
-                            if (npc.id !== this.id && npc.parts[0]) {
-                                let d = Math.hypot(head.x - npc.parts[0].x, head.y - npc.parts[0].y);
-                                if (d < minDist) { minDist = d; target = npc.parts[0]; }
+                        let food = findClosestFood(head);
+                        if (food) {
+                            this.angle += (Math.atan2(food.y - head.y, food.x - head.x) - this.angle) * 0.1;
+                            if (Math.hypot(head.x - food.x, head.y - food.y) < 120 && now >= this.npcNextBoostAvailableAt && Math.random() < 0.05) {
+                                this.npcBoostActiveUntil = now + 2000;
+                                this.npcNextBoostAvailableAt = now + 60000;
                             }
-                        });
-
-                        if (target) {
-                            this.angle += (Math.atan2(target.y - head.y, target.x - head.x) - this.angle) * 0.12;
-                        } else {
-                            let food = findClosestFood(head);
-                            if (food) this.angle += (Math.atan2(food.y - head.y, food.x - head.x) - this.angle) * 0.06;
                         }
+                    }
+
+                    if (isNPCBoosting) {
+                        currentSpeed = baseSnakeSpeed * 1.75;
                     }
                 }
 
@@ -547,10 +927,10 @@
                 
                 while (this.parts.length > this.targetLength) this.parts.pop();
 
-                if (head.x < -thickness) { head.x = arenaWidth + thickness; this.parts.forEach(p => p.x += arenaWidth); }
-                else if (head.x > arenaWidth + thickness) { head.x = -thickness; this.parts.forEach(p => p.x -= arenaWidth); }
-                if (head.y < -thickness) { head.y = arenaHeight + thickness; this.parts.forEach(p => p.y += arenaHeight); }
-                else if (head.y > arenaHeight + thickness) { head.y = -thickness; this.parts.forEach(p => p.y -= arenaHeight); }
+                if (head.x < -this.currentThickness) { head.x = arenaWidth + this.currentThickness; this.parts.forEach(p => p.x += arenaWidth); }
+                else if (head.x > arenaWidth + this.currentThickness) { head.x = -this.currentThickness; this.parts.forEach(p => p.x -= arenaWidth); }
+                if (head.y < -this.currentThickness) { head.y = arenaHeight + this.currentThickness; this.parts.forEach(p => p.y += arenaHeight); }
+                else if (head.y > arenaHeight + this.currentThickness) { head.y = -this.currentThickness; this.parts.forEach(p => p.y -= arenaHeight); }
             }
 
             draw() {
@@ -560,20 +940,37 @@
                 const isColor = this.skin.type === 'color';
                 const flagImg = !isColor ? cacheMap[this.skin.val] : null;
                 const isPlayerActiveBoost = (!this.isNPC && Date.now() < boostActiveUntil);
+                
+                // Track if it's an explicit legendary skin
+                let isLegendarySkin = (this.skin.type === 'color' && (this.skin.val === "#ff007f" || this.skin.val === "#7fff00" || this.skin.val === "#9400d3" || this.skin.val === "#ffd700"));
+                let activeThick = this.currentThickness;
 
                 for (let i = this.parts.length - 1; i >= 0; i--) {
                     let p = this.parts[i];
-                    let r = thickness * (1 - i / (this.parts.length * 2.5));
-                    if (i === 0) r = thickness + 2; 
+                    let r = activeThick * (1 - i / (this.parts.length * 2.5));
+                    if (i === 0) r = activeThick + 2; 
                     let size = r * 2;
 
-                    if (isPlayerActiveBoost) {
-                        ctx.shadowBlur = 12;
-                        ctx.shadowColor = "#00f2fe";
+                    // Legendary skins now have specialized procedural patterns applied across segments
+                    if (isLegendarySkin) {
+                        ctx.shadowBlur = 22;
+                        ctx.shadowColor = this.skin.val;
+                        
+                        // Modulate segment color on individual levels to create alternate matrix styles instead of simple flat textures
+                        if (i % 2 === 0) {
+                            ctx.fillStyle = "#ffffff"; 
+                        } else {
+                            ctx.fillStyle = this.skin.val;
+                        }
+                    } else {
+                        if (isPlayerActiveBoost) {
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = "#00f2fe";
+                        }
+                        ctx.fillStyle = this.skin.val;
                     }
 
                     if (isColor) {
-                        ctx.fillStyle = this.skin.val;
                         ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
                     } else if (flagImg) {
                         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(this.angle);
@@ -587,34 +984,43 @@
                 ctx.save();
                 ctx.translate(head.x, head.y);
                 ctx.rotate(this.angle + Math.PI/2);
-                ctx.font = `${thickness * 2.1}px Arial`;
+                ctx.font = `${activeThick * 2.1}px Arial`;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(currentFace, 0, 0);
                 ctx.restore();
 
                 ctx.save();
-                ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-                ctx.font = "bold 12px 'Segoe UI', Arial, sans-serif";
                 ctx.textAlign = "center";
-                ctx.shadowColor = "#000000"; ctx.shadowBlur = 3;
-                ctx.fillText(this.name, head.x, head.y - thickness * 2.0);
+                ctx.font = "bold 13px 'Segoe UI', Arial, sans-serif";
+                
+                if (this.customLvl >= 100) {
+                    let hue = (Date.now() / 15) % 360;
+                    ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+                    ctx.shadowColor = "#000000"; 
+                    ctx.shadowBlur = 4;
+                }
+                
+                ctx.fillText(`[Lvl ${this.customLvl}] ${this.name}`, head.x, head.y - activeThick * 2.3);
                 ctx.restore();
             }
         }
 
-        function dropPointsOnDeath(parts, skinColor) {
+        function dropPointsOnDeath(parts, skinColor, computedThickness) {
             let verifiedColor = (skinColor && skinColor.startsWith("#")) ? skinColor : "#00ff88";
-            
             parts.forEach((part, index) => {
                 if (index % 2 === 0) { 
-                    let scatterRadius = 60; 
+                    let scatterRadius = 70; 
                     foodArray.push({
                         x: part.x + (Math.random() * scatterRadius * 2 - scatterRadius),
                         y: part.y + (Math.random() * scatterRadius * 2 - scatterRadius),
                         color: verifiedColor,
-                        isSuper: Math.random() < 0.20, 
-                        baseRadius: 8
+                        isSuper: Math.random() < 0.25, 
+                        baseRadius: 9
                     });
                 }
             });
@@ -636,17 +1042,14 @@
             mouse.y = clientY;
         }
 
-        // Mouse Controls (Desktop Fallback)
         window.addEventListener('click', (e) => {
-            if(e.target.closest('#start-screen') || e.target.closest('#game-over-screen')) return;
+            if(e.target.closest('#start-screen') || e.target.closest('#game-over-screen') || e.target.closest('#level-stream-modal')) return;
             tryActivateBoost();
         });
         window.addEventListener('mousemove', (e) => { if(!isDrawingTouch) handleSteerInput(e.clientX, e.clientY); });
         
-        // Touch Controls (Mobile Native Optimization)
         window.addEventListener('touchstart', (e) => {
-            // Protect UI buttons from triggering vector movements
-            if(e.target.closest('#start-screen') || e.target.closest('#game-over-screen')) return;
+            if(e.target.closest('#start-screen') || e.target.closest('#game-over-screen') || e.target.closest('#level-stream-modal')) return;
             
             isDrawingTouch = true;
             const touch = e.touches[0];
@@ -655,17 +1058,16 @@
             touchIndicator.style.top = `${touch.clientY}px`;
             handleSteerInput(touch.clientX, touch.clientY);
 
-            // High accuracy mobile double-tap recognition engine with zoom protection
             let now = Date.now();
             if (now - lastTapTime < 300) {
-                e.preventDefault(); // Kills browser zooming action instantly
+                e.preventDefault(); 
                 tryActivateBoost();
             }
             lastTapTime = now;
-        }, { passive: false }); // Set to false to allow preventDefault layout hooks
+        }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
-            if(e.target.closest('#start-screen') || e.target.closest('#game-over-screen')) return;
+            if(e.target.closest('#start-screen') || e.target.closest('#game-over-screen') || e.target.closest('#level-stream-modal')) return;
             const touch = e.touches[0];
             touchIndicator.style.left = `${touch.clientX}px`;
             touchIndicator.style.top = `${touch.clientY}px`;
@@ -685,13 +1087,13 @@
         }
 
         function spawnFood() {
-            let isSuper = Math.random() < 0.10; 
+            let isSuper = Math.random() < 0.12; 
             return {
                 x: Math.random() * (arenaWidth - 60) + 30,
                 y: Math.random() * (arenaHeight - 60) + 30,
                 color: isSuper ? "#ffffff" : `hsl(${Math.random() * 360}, 100%, 60%)`,
                 isSuper: isSuper,
-                baseRadius: isSuper ? 11 : 7 
+                baseRadius: isSuper ? 12 : 7 
             };
         }
 
@@ -714,6 +1116,28 @@
             }
         }
 
+        function renderLeaderboard() {
+            if (inMenu || gameOver) return;
+            
+            let competitors = [];
+            if (player) competitors.push({ name: player.name, food: player.foodEatenCount, isPlayer: true });
+            npcs.forEach(n => competitors.push({ name: n.name, food: n.foodEatenCount, isPlayer: false }));
+            
+            competitors.sort((a,b) => b.food - a.food);
+            
+            let htmlStr = "";
+            let maxLeaderboardRows = Math.min(5, competitors.length);
+            for (let i=0; i < maxLeaderboardRows; i++) {
+                let entry = competitors[i];
+                let rowClass = entry.isPlayer ? "leaderboard-row player-row" : "leaderboard-row";
+                htmlStr += `<div class="${rowClass}">
+                    <span class="leaderboard-name">${i+1}. ${entry.name}</span>
+                    <span>${entry.food}</span>
+                </div>`;
+            }
+            leaderboardContent.innerHTML = htmlStr;
+        }
+
         function setupArenaEnvironment() {
             score = 0; gameOver = false; gameStarted = false;
             lastBoostTime = 0; boostActiveUntil = 0; 
@@ -728,9 +1152,9 @@
             
             foodArray = Array.from({ length: 300 }, spawnFood);
             
-            const npcColors = ["#be2edd", "#f0932b", "#eb4d4b", "#70a1ff", "#eccc68", "#00f2fe", "#ff4757", "#ffa502"];
+            const npcColors = ["#be2edd", "#f0932b", "#eb4d4b", "#70a1ff", "#eccc68", "#00f2fe", "#ff4757", "#ffd700"];
             npcs = [];
-            for (let idx = 0; idx < 25; idx++) {
+            for (let idx = 0; idx < 28; idx++) {
                 let rx = Math.random() * arenaWidth;
                 let ry = Math.random() * arenaHeight;
                 let randomColor = npcColors[idx % npcColors.length];
@@ -740,31 +1164,41 @@
 
         function startGame() {
             inMenu = false;
+            matchStartTime = Date.now();
             if(startScreen) startScreen.style.display = "none";
             if(uiLayer) uiLayer.style.display = "block";
+            if(leaderboardPanel) leaderboardPanel.style.display = "block";
             if(player) {
                 player.name = playerNameInput.value.trim() || "Player";
                 player.parts.forEach(p => { p.x = arenaWidth / 2; p.y = arenaHeight / 2; });
+                player.foodEatenCount = 0;
+                player.targetLength = 20;
             }
-            lastBoostTime = Date.now() - 45000; 
+            lastBoostTime = Date.now() - 45000;
         }
 
         function tryAgain() {
             if(gameOverScreen) gameOverScreen.style.display = "none"; 
             if(uiLayer) uiLayer.style.display = "block";
-            inMenu = false; setupArenaEnvironment();
+            if(leaderboardPanel) leaderboardPanel.style.display = "block";
+            inMenu = false; 
+            matchStartTime = Date.now();
+            setupArenaEnvironment();
             lastBoostTime = Date.now() - 45000;
         }
 
         function backToMenu() {
             inMenu = true; 
             if(gameOverScreen) gameOverScreen.style.display = "none"; 
+            if(leaderboardPanel) leaderboardPanel.style.display = "none";
             if(startScreen) startScreen.style.display = "flex";
-            setupArenaEnvironment(); renderCustomizerItems();
+            setupArenaEnvironment(); 
+            updateMenuProfileHUD();
+            renderCustomizerItems();
         }
 
         function loop() {
-            ctx.fillStyle = "#070614"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#05040d"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             pulseTime += 0.07; 
 
             if(!player || !player.parts[0]) {
@@ -778,10 +1212,6 @@
             let cameraY = player.parts[0].y - canvas.height / 2;
 
             const padding = 100; 
-            const viewportLeft = cameraX - padding;
-            const viewportRight = cameraX + canvas.width + padding;
-            const viewportTop = cameraY - padding;
-            const viewportBottom = cameraY + canvas.height + padding;
 
             if (inMenu) {
                 player.update();
@@ -789,48 +1219,74 @@
                 player.update();
                 npcs.forEach(npc => npc.update());
 
-                if (foodArray.length < 300) {
+                if(gameStarted) {
+                    addExperience(0.12);
+                }
+
+                if (foodArray.length < 320) {
                     foodArray.push(spawnFood());
                 }
 
+                if(Math.random() < 0.08) {
+                    let randomNPC = npcs[Math.floor(Math.random() * npcs.length)];
+                    if(randomNPC) {
+                        randomNPC.foodEatenCount += Math.floor(Math.random() * 3) + 1;
+                        randomNPC.targetLength += 1;
+                    }
+                }
+
                 foodArray.forEach((food, index) => {
-                    let hitRadius = thickness + food.baseRadius;
+                    let hitRadius = player.currentThickness + food.baseRadius;
                     
                     if (gameStarted && !inMenu) {
                         if (Math.hypot(player.parts[0].x - food.x, player.parts[0].y - food.y) < hitRadius) {
-                            score += food.isSuper ? 50 : 10; 
+                            let pts = food.isSuper ? 50 : 10;
+                            score += pts; 
+                            player.foodEatenCount += 1; 
+                            
+                            if (food.isSuper) addExperience(15);
+                            else addExperience(3);
+
                             if(scoreElement) scoreElement.innerText = score;
-                            player.targetLength += food.isSuper ? 3 : 1;
+                            player.targetLength += food.isSuper ? 4 : 1;
                             foodArray[index] = spawnFood();
                         }
                     }
                     
                     npcs.forEach(npc => {
-                        if (npc.parts[0] && Math.hypot(npc.parts[0].x - food.x, npc.parts[0].y - food.y) < hitRadius) {
-                            npc.targetLength += food.isSuper ? 2 : 1;
+                        let npchitRadius = npc.currentThickness + food.baseRadius;
+                        if (npc.parts[0] && Math.hypot(npc.parts[0].x - food.x, npc.parts[0].y - food.y) < npchitRadius) {
+                            npc.targetLength += food.isSuper ? 3 : 1;
+                            npc.foodEatenCount += food.isSuper ? 3 : 1; 
                             foodArray[index] = spawnFood();
                         }
                     });
                 });
 
+                if (Math.floor(pulseTime * 10) % 5 === 0) {
+                    renderLeaderboard();
+                }
+
                 if (gameStarted) {
                     let pHead = player.parts[0];
                     npcs.forEach(npc => {
                         for (let i = 3; i < npc.parts.length; i++) {
-                            if (Math.hypot(pHead.x - npc.parts[i].x, pHead.y - npc.parts[i].y) < thickness) {
+                            if (Math.hypot(pHead.x - npc.parts[i].x, pHead.y - npc.parts[i].y) < npc.currentThickness) {
                                 gameOver = true; 
                                 if(uiLayer) uiLayer.style.display = "none";
+                                if(leaderboardPanel) leaderboardPanel.style.display = "none";
                                 if(finalScoreElement) finalScoreElement.innerText = `Final Score: ${score}`;
                                 if(gameOverScreen) gameOverScreen.style.display = "flex";
-                                dropPointsOnDeath(player.parts, player.skin.val);
+                                dropPointsOnDeath(player.parts, player.skin.val, player.currentThickness);
                             }
                         }
                         let nHead = npc.parts[0];
                         if(nHead) {
                             for (let i = 3; i < player.parts.length; i++) {
-                                if (Math.hypot(nHead.x - player.parts[i].x, nHead.y - player.parts[i].y) < thickness) {
-                                    dropPointsOnDeath(npc.parts, npc.skin.val);
+                                if (Math.hypot(nHead.x - player.parts[i].x, nHead.y - player.parts[i].y) < player.currentThickness) {
+                                    dropPointsOnDeath(npc.parts, npc.skin.val, npc.currentThickness);
                                     npc.targetLength = 20; 
+                                    npc.foodEatenCount = Math.floor(Math.random() * 20); 
                                     npc.parts = Array.from({ length: 20 }, () => ({ x: Math.random() * arenaWidth, y: Math.random() * arenaHeight }));
                                 }
                             }
@@ -840,33 +1296,49 @@
             }
 
             ctx.save();
-            ctx.translate(-cameraX, -cameraY);
-
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
-            ctx.lineWidth = 2;
-            const gridSpacer = 80;
             
-            let startGridX = Math.max(0, Math.floor(viewportLeft / gridSpacer) * gridSpacer);
-            let endGridX = Math.min(arenaWidth, Math.ceil(viewportRight / gridSpacer) * gridSpacer);
-            for (let x = startGridX; x <= endGridX; x += gridSpacer) {
-                ctx.beginPath(); ctx.moveTo(x, Math.max(0, viewportTop)); ctx.lineTo(x, Math.min(arenaHeight, viewportBottom)); ctx.stroke();
+            let targetWidth = 1400; 
+            let currentScale = 1.0; 
+            if (canvas.width < targetWidth) {
+                currentScale = canvas.width / targetWidth;
+                if (currentScale < 0.55) currentScale = 0.55; 
             }
             
-            let startGridY = Math.max(0, Math.floor(viewportTop / gridSpacer) * gridSpacer);
-            let endGridY = Math.min(arenaHeight, Math.ceil(viewportBottom / gridSpacer) * gridSpacer);
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.scale(currentScale, currentScale);
+            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+            ctx.translate(-cameraX, -cameraY);
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+            ctx.lineWidth = 2 / currentScale;
+            const gridSpacer = 80;
+            
+            let adjustedLeft = cameraX - (padding / currentScale);
+            let adjustedRight = cameraX + (canvas.width / currentScale) + padding;
+            let adjustedTop = cameraY - (padding / currentScale);
+            let adjustedBottom = cameraY + (canvas.height / currentScale) + padding;
+
+            let startGridX = Math.max(0, Math.floor(adjustedLeft / gridSpacer) * gridSpacer);
+            let endGridX = Math.min(arenaWidth, Math.ceil(adjustedRight / gridSpacer) * gridSpacer);
+            for (let x = startGridX; x <= endGridX; x += gridSpacer) {
+                ctx.beginPath(); ctx.moveTo(x, Math.max(0, adjustedTop)); ctx.lineTo(x, Math.min(arenaHeight, adjustedBottom)); ctx.stroke();
+            }
+            
+            let startGridY = Math.max(0, Math.floor(adjustedTop / gridSpacer) * gridSpacer);
+            let endGridY = Math.min(arenaHeight, Math.ceil(adjustedBottom / gridSpacer) * gridSpacer);
             for (let y = startGridY; y <= endGridY; y += gridSpacer) {
-                ctx.beginPath(); ctx.moveTo(Math.max(0, viewportLeft), y); ctx.lineTo(Math.min(arenaWidth, viewportRight), y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(Math.max(0, adjustedLeft), y); ctx.lineTo(Math.min(arenaWidth, adjustedRight), y); ctx.stroke();
             }
 
             if (!inMenu) {
                 foodArray.forEach(f => {
-                    if (f.x >= viewportLeft && f.x <= viewportRight && f.y >= viewportTop && f.y <= viewportBottom) {
+                    if (f.x >= adjustedLeft && f.x <= adjustedRight && f.y >= adjustedTop && f.y <= adjustedBottom) {
                         if (f.isSuper) {
                             let animatedRadius = f.baseRadius + Math.sin(pulseTime) * 1.5;
                             ctx.shadowBlur = 10; ctx.shadowColor = "#00f2fe";
                             ctx.fillStyle = "#ffffff";
                             ctx.beginPath(); ctx.arc(f.x, f.y, animatedRadius, 0, Math.PI * 2); ctx.fill();
-                            ctx.shadowBlur = 0; 
+                            ctx.shadowBlur = 0;  
                         } else {
                             ctx.fillStyle = f.color;
                             ctx.beginPath(); ctx.arc(f.x, f.y, f.baseRadius, 0, Math.PI * 2); ctx.fill();
@@ -876,7 +1348,7 @@
 
                 npcs.forEach(npc => {
                     let h = npc.parts[0];
-                    if (h && h.x >= viewportLeft && h.x <= viewportRight && h.y >= viewportTop && h.y <= viewportBottom) {
+                    if (h && h.x >= adjustedLeft && h.x <= adjustedRight && h.y >= adjustedTop && h.y <= adjustedBottom) {
                         npc.draw();
                     }
                 });
@@ -889,6 +1361,7 @@
         }
 
         window.onload = function() {
+            loadProfile();
             preRenderFlagTextures();
             renderCustomizerItems();
             setupArenaEnvironment();
@@ -896,4 +1369,4 @@
         };
     </script>
 </body>
-</html>
+</html>-
