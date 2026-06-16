@@ -337,15 +337,17 @@
             box-shadow: 0 0 10px rgba(0,255,136,0.2);
         }
 
-        /* Insane Glowing Legendary States */
+        /* Insane Glowing Legendary States for Icons */
         .legendary-glow-item {
-            animation: insaneNeonBorder 2s ease-in-out infinite alternate;
+            animation: insaneNeonBorder 1.5s linear infinite;
             background: rgba(255, 0, 128, 0.1) !important;
+            border-width: 3px !important;
         }
         @keyframes insaneNeonBorder {
-            0% { border-color: #ff0055; box-shadow: 0 0 8px #ff0055, inset 0 0 4px #ff0055; }
-            50% { border-color: #9400d3; box-shadow: 0 0 18px #9400d3, inset 0 0 8px #9400d3; }
-            100% { border-color: #ffd700; box-shadow: 0 0 25px #ffd700, inset 0 0 12px #ffd700; }
+            0% { border-color: #ff0055; box-shadow: 0 0 10px #ff0055, inset 0 0 5px #ff0055; }
+            33% { border-color: #9400d3; box-shadow: 0 0 15px #9400d3, inset 0 0 5px #9400d3; }
+            66% { border-color: #00f2fe; box-shadow: 0 0 15px #00f2fe, inset 0 0 5px #00f2fe; }
+            100% { border-color: #ff0055; box-shadow: 0 0 10px #ff0055, inset 0 0 5px #ff0055; }
         }
 
         .skin-lock-overlay {
@@ -838,7 +840,6 @@
                 this.foodEatenCount = isNPC ? Math.floor(Math.random() * 80) : 0; 
                 this.customLvl = isNPC ? Math.floor(Math.random() * 95) + 1 : profileState.level;
                 
-                // Added structural cooldown properties for NPCs
                 this.npcBoostActiveUntil = 0;
                 this.npcNextBoostAvailableAt = 0; 
 
@@ -846,7 +847,6 @@
                     const allNPCList = [...emojiCategories.emoji_smilies, ...emojiCategories.emoji_warriors, ...emojiCategories.emoji_animals, ...emojiCategories.emoji_legendary];
                     this.npcEmoji = allNPCList[Math.floor(Math.random() * allNPCList.length)];
                     
-                    // Assign random initial skins to NPCs, including matching Legendary configurations
                     if (Math.random() < 0.25) {
                         let legends = clothingColors.filter(c => c.legendary);
                         this.skin = { type: 'color', val: legends[Math.floor(Math.random() * legends.length)].hex };
@@ -895,7 +895,6 @@
                         player.parts.forEach((p, i) => {
                             if (i > 1 && Math.hypot(sx - p.x, sy - p.y) < this.currentThickness * 2.5) {
                                 danger = true;
-                                // NPCs obey a strict 60-second balance cooldown before firing boost again
                                 if(now >= this.npcNextBoostAvailableAt && Math.random() < 0.4) { 
                                     this.npcBoostActiveUntil = now + 2500; 
                                     this.npcNextBoostAvailableAt = now + 60000; 
@@ -941,7 +940,6 @@
                 const flagImg = !isColor ? cacheMap[this.skin.val] : null;
                 const isPlayerActiveBoost = (!this.isNPC && Date.now() < boostActiveUntil);
                 
-                // Track if it's an explicit legendary skin
                 let isLegendarySkin = (this.skin.type === 'color' && (this.skin.val === "#ff007f" || this.skin.val === "#7fff00" || this.skin.val === "#9400d3" || this.skin.val === "#ffd700"));
                 let activeThick = this.currentThickness;
 
@@ -951,12 +949,10 @@
                     if (i === 0) r = activeThick + 2; 
                     let size = r * 2;
 
-                    // Legendary skins now have specialized procedural patterns applied across segments
                     if (isLegendarySkin) {
                         ctx.shadowBlur = 22;
                         ctx.shadowColor = this.skin.val;
                         
-                        // Modulate segment color on individual levels to create alternate matrix styles instead of simple flat textures
                         if (i % 2 === 0) {
                             ctx.fillStyle = "#ffffff"; 
                         } else {
@@ -992,20 +988,21 @@
 
                 ctx.save();
                 ctx.textAlign = "center";
-                ctx.font = "bold 13px 'Segoe UI', Arial, sans-serif";
+                ctx.font = "bold 14px 'Segoe UI', Arial, sans-serif";
                 
+                // Text color feature for Legendary (Level 100) states
                 if (this.customLvl >= 100) {
                     let hue = (Date.now() / 15) % 360;
                     ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
                     ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-                    ctx.shadowBlur = 10;
+                    ctx.shadowBlur = 12;
                 } else {
                     ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
                     ctx.shadowColor = "#000000"; 
                     ctx.shadowBlur = 4;
                 }
                 
-                ctx.fillText(`[Lvl ${this.customLvl}] ${this.name}`, head.x, head.y - activeThick * 2.3);
+                ctx.fillText(`[Lvl ${this.customLvl}] ${this.name}`, head.x, head.y - activeThick * 2.5);
                 ctx.restore();
             }
         }
@@ -1297,11 +1294,17 @@
 
             ctx.save();
             
+            // Mobile Optimization Scaling Layer
             let targetWidth = 1400; 
             let currentScale = 1.0; 
             if (canvas.width < targetWidth) {
                 currentScale = canvas.width / targetWidth;
-                if (currentScale < 0.55) currentScale = 0.55; 
+                
+                // If on mobile layout, increase minimum scale limit (e.g. 0.85 instead of 0.55)
+                // This makes objects look much closer and larger like Free Fire without breaking desktop layout pov!
+                let isMobileDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                let minAllowedZoom = isMobileDevice ? 0.85 : 0.55;
+                if (currentScale < minAllowedZoom) currentScale = minAllowedZoom; 
             }
             
             ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -1369,4 +1372,4 @@
         };
     </script>
 </body>
-</html>-
+</html>
